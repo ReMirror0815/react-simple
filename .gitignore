@@ -1,0 +1,11 @@
+# Visual Studio Code
+#
+.vscode/
+
+# node.js
+#
+node_modules/
+yarn-error.log
+
+# build
+build/
