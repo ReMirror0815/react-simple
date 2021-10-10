@@ -1,3 +1,5 @@
+import Component from '../react/Component'
+
 const ReactDOM = {
   // 多次地调用render函数时,不会清除原来的内容 先清除一下挂载目标DOM的内容
   render:(vnode,container)=>{
@@ -6,34 +8,77 @@ const ReactDOM = {
   }
 }
 
-function render(vnode, container) {
- // 如果vnode为定义,则什么都不做
- if (vnode == undefined) return;
- // 如果vnode是字符串是,渲染结果是一段文本
- if (typeof vnode === 'string') {
-     const textNode = document.createTextNode(vnode);
-     return container.appendChild(textNode);
- }
- // 否则是一个虚拟DOM对象
- const {
-     tag
- } = vnode;
- // 创建节点对象
- const dom = document.createElement(tag);
+function render (vnode, container){
+    return container.appendChild(_render(vnode));
+}
 
- if (vnode.attrs) {
-     // 有属性
-     Object.keys(vnode.attrs).forEach(key => {
-         // 取值
-         const val = vnode.attrs[key];
-         // 为上面的节点对象设置属性
-         setAttribute(dom, key, val);
-     })
- }
- // 递归渲染子节点
- vnode.childrens.forEach(child => render(child, dom));
- // 将渲染结果挂载到真正的DOM上
- return container.appendChild(dom);
+function createComponent(comp,props){
+    let inst;
+    // 如果是类定义的组件 则创建实例
+    if(comp.prototype && comp.prototype.render){
+        inst = new comp(props)
+    } else {
+        // 函数组件，将函数组件构造成类组件方便统一管理
+        inst = new Component(props)
+        inst.constructor = comp;
+        inst.render = function(){
+            return this.constructor(props)
+        }
+    }
+    return inst
+}
+
+function setComponentProps(comp,props){
+    // 设置属性
+    comp.props = props;
+    // 渲染组件
+    renderComponent(comp);
+}
+
+function renderComponent(comp) {
+    const renderer =  comp.render()
+    comp.base = _render(renderer)
+}
+
+function _render(vnode) {
+    // 如果vnode为定义,则什么都不做
+    if (vnode === undefined || vnode === null || typeof vnode === 'boolean') return '';
+    // 如果vnode是字符串是,渲染结果是一段文本
+    if (typeof vnode === 'string') {
+        return document.createTextNode(vnode);
+    }
+
+    // 如果tag是一个函数
+    if( typeof vnode.tag === 'function'){
+        // 创建组件
+        const comp = createComponent(vnode.tag,vnode.attrs)
+        // 设置组件的属性
+        setComponentProps(comp,vnode.attrs)
+        // 组件喧嚷的节点对象返回
+        return comp.base
+    }
+
+
+    // 否则是一个虚拟DOM对象
+    const {
+        tag
+    } = vnode;
+    // 创建节点对象
+    const dom = document.createElement(tag);
+
+    if (vnode.attrs) {
+        // 有属性
+        Object.keys(vnode.attrs).forEach(key => {
+            // 取值
+            const val = vnode.attrs[key];
+            // 为上面的节点对象设置属性
+            setAttribute(dom, key, val);
+        })
+    }
+    // 递归渲染子节点
+    vnode.childrens.forEach(child => render(child, dom));
+    // 将渲染结果挂载到真正的DOM上
+    return dom;
 }
 
 function setAttribute(dom, key, value) {
